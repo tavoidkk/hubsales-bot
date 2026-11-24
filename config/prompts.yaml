@@ -3,26 +3,26 @@
 # y usa estos textos si OpenRouter no está disponible o se sale de la línea.
 
 mensajes:
-  saludo: "Hola, te escribe {nombre}, {rol} en {empresa}. ¿Me decís tu nombre y me confirmás que venís por la oferta de vendedor que publicamos?"
-  pedir_nombre: "¿Me decís tu nombre, por favor?"
-  pedir_confirmacion: "¿Me confirmás que venís por la oferta de vendedor que publicamos?"
-  despedida: "¡Gracias, {nombre}! Acá tenés el formulario de la oferta de vendedor: {link}. Completalo y el equipo de HubSales Group te contacta. ¡Muchos éxitos!"
-  reenviar_link: "Acá tenés el formulario de la oferta de vendedor otra vez: {link}."
-  post_formulario: "Listo, {nombre}. El equipo de HubSales Group te va a contactar. Cualquier duda, escribime por acá."
-  post_formulario_sin_nombre: "Listo. El equipo de HubSales Group te va a contactar. Cualquier duda, escribime por acá."
-  sin_link: "Gracias, {nombre}. Estoy preparando el enlace del formulario; escribime en unos minutos y te lo paso."
-  contexto: "El puesto es {puesto}. El pago es {pago}, con {pagos} y {bonos}. Es {modalidad}. {condiciones} {seguimiento}"
-  contexto_repetido: "Ya te conté lo principal de la oferta de vendedor. {seguimiento} ¿Me decís tu nombre y me confirmás que venís por ella?"
-  humano: "El equipo de HubSales Group te va a contactar con más información. Mientras tanto, decime tu nombre y confirmá que venís por la oferta de vendedor que publicamos para pasarte el formulario."
-  fuera_de_linea: "Solo puedo ayudarte con la oferta de vendedor que publicamos. Decime tu nombre y confirmá que venís por ella para pasarte el formulario."
-  ingles: "Solo atiendo en español. Decime tu nombre y confirmá que venís por la oferta de vendedor que publicamos para pasarte el formulario."
-  malicioso: "No puedo aceptar esa instrucción. Detecté {detalle}. Sigamos con la oferta: ¿me decís tu nombre y me confirmás que venís por la oferta de vendedor que publicamos?"
-  solo_texto: "Por ahora solo leo mensajes de texto. Escribime, por favor."
-  error: "Estoy teniendo un problema técnico momentáneo. ¿Me repetís eso, por favor?"
+  saludo: "Hola, le escribe {nombre}, {rol} en {empresa}. ¿Me podría indicar su nombre y confirmarme que viene por la oferta de vendedor que publicamos?"
+  pedir_nombre: "¿Me podría indicar su nombre, por favor?"
+  pedir_confirmacion: "¿Me confirma que viene por la oferta de vendedor que publicamos?"
+  despedida: "Muchas gracias, {nombre}. Este es el formulario de la oferta de vendedor: {link}. Complete sus datos y el equipo de HubSales Group se comunicará con usted. ¡Éxitos!"
+  reenviar_link: "Con gusto. Este es el formulario de la oferta de vendedor nuevamente: {link}."
+  post_formulario: "Perfecto, {nombre}. El equipo de HubSales Group se comunicará con usted. Quedo atento a cualquier consulta."
+  post_formulario_sin_nombre: "Perfecto. El equipo de HubSales Group se comunicará con usted. Quedo atento a cualquier consulta."
+  sin_link: "Gracias, {nombre}. Estoy preparando el enlace del formulario; escríbame en unos minutos y se lo envío."
+  contexto: "El puesto es {puesto}. El pago es {pago}, con {pagos} y {bonos}. La modalidad es {modalidad}. {condiciones} {seguimiento}"
+  contexto_repetido: "Ya le compartí los principales detalles de la oferta de vendedor. {seguimiento} ¿Me indica su nombre y me confirma que viene por ella?"
+  humano: "El equipo de HubSales Group se comunicará con usted con más información. Mientras tanto, indíqueme su nombre y confirme que viene por la oferta de vendedor que publicamos para enviarle el formulario."
+  fuera_de_linea: "Solo puedo ayudarle con la oferta de vendedor que publicamos. Indíqueme su nombre y confirme que viene por ella para enviarle el formulario."
+  ingles: "Solo atiendo en español. Indíqueme su nombre y confirme que viene por la oferta de vendedor que publicamos para enviarle el formulario."
+  malicioso: "No puedo aceptar esa instrucción. Detecté {detalle}. Continuemos con la oferta: ¿me indica su nombre y me confirma que viene por la oferta de vendedor que publicamos?"
+  solo_texto: "Por ahora solo leo mensajes de texto. Escríbame, por favor."
+  error: "Estoy teniendo un problema técnico momentáneo. ¿Me repite eso, por favor?"
 
 reglas:
   idioma: "es"
-  tono: "argentino, voseo, cercano y profesional"
+  tono: "formal, cordial y profesional (usted)"
   no_revelar_ia: true
   no_salir_de_la_linea: true
   contexto_solo_si_pregunta: true

@@ -82,4 +82,4 @@ def mensaje(clave: str, **valores: str) -> str:
         return plantilla.format(**valores)
     except (KeyError, IndexError, ValueError):
         # Si falta un valor, no inventamos texto: se reporta como error.
-        return str(textos.get("error") or "Hubo un problema. Intentá de nuevo.")
+        return str(textos.get("error") or "Hubo un problema. Intente de nuevo.")

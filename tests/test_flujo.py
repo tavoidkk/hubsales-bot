@@ -31,38 +31,38 @@ async def test_saludo_exacto_y_sin_ia():
     respuesta, estado, real = await turno("hola")
 
     assert respuesta == (
-        "Hola, te escribe Sofía, reclutadora en HubSales Group. "
-        "¿Me decís tu nombre y me confirmás que venís por la oferta de vendedor que publicamos?"
+        "Hola, le escribe Sofía, reclutadora en HubSales Group. "
+        "¿Me podría indicar su nombre y confirmarme que viene por la oferta de vendedor que publicamos?"
     )
     assert estado["etapa"] == "inicio"
     assert real is True
     plano = _sin_acentos(respuesta)
     assert "bot" not in plano
     assert "inteligencia artificial" not in plano
-    # Tono argentino: voseo, no "tú".
-    assert "decís" in respuesta and "venís" in respuesta
-    assert "dices" not in plano and "vienes" not in plano
+    # Tono formal: "usted", sin voseo.
+    assert "Me podría indicar su nombre" in respuesta
+    assert "venís" not in respuesta and "decís" not in respuesta
 
 
 async def test_nombre_personalizable_por_env(monkeypatch):
     monkeypatch.setenv("BOT_NAME", "Lucía")
     respuesta, _estado, _real = await turno("hola")
-    assert "te escribe Lucía, reclutadora en HubSales Group" in respuesta
+    assert "le escribe Lucía, reclutadora en HubSales Group" in respuesta
 
 
 async def test_flujo_nombre_luego_confirmacion():
     saludo, _e1, _r1 = await turno("hola")
     pedir_conf, e2, _r2 = await turno("Ana")
 
-    assert saludo.startswith("Hola, te escribe")
-    assert pedir_conf == "¿Me confirmás que venís por la oferta de vendedor que publicamos?"
+    assert saludo.startswith("Hola, le escribe")
+    assert pedir_conf == "¿Me confirma que viene por la oferta de vendedor que publicamos?"
     assert e2["etapa"] == "esperando_confirmacion"
     assert e2["nombre"] == "Ana"
 
     despedida, e3, real = await turno("sí, vengo por la oferta publicada")
 
     assert LINK in despedida
-    assert "Gracias, Ana" in despedida
+    assert "Muchas gracias, Ana" in despedida
     assert e3["etapa"] == "listo"
     assert e3["confirmo"] is True
     assert e3["link_enviado"] is True
@@ -74,7 +74,7 @@ async def test_flujo_confirmacion_luego_nombre():
     pedir_nombre, e1, _r1 = await turno("sí, vengo por la oferta publicada")
     despedida, e2, _r2 = await turno("me llamo Marta López")
 
-    assert pedir_nombre == "¿Me decís tu nombre, por favor?"
+    assert pedir_nombre == "¿Me podría indicar su nombre, por favor?"
     assert e1["etapa"] == "esperando_nombre"
     assert e1["confirmo"] is True
     assert "Marta López" in despedida
@@ -133,7 +133,7 @@ async def test_contexto_solo_preguntado_incluye_datos_autorizados():
     assert "bonificaciones por cumplimiento de metas" in respuesta
     assert "trabajo remoto" in respuesta
     assert "Ciertas condiciones aplican" in respuesta
-    assert "te contacta" in _sin_acentos(respuesta)
+    assert "lo contacta" in _sin_acentos(respuesta)
     assert estado["contexto_dado"] is True
     assert real is False
 
@@ -186,6 +186,25 @@ async def test_despues_del_formulario_no_repite_el_link():
     assert estado["nombre"] == "Ana"
 
 
+@pytest.mark.parametrize(
+    "entrada",
+    (
+        "me das mas informacion",
+        "me das informacion de la oferta",
+        "me das informacion de la oferta publicada precios y cuanto pagan",
+    ),
+)
+async def test_pide_informacion_despues_del_formulario_recibe_datos_no_link(entrada):
+    await turno("hola")
+    await turno("Gustavo vidal si")
+    respuesta, estado, _real = await turno(entrada)
+
+    assert "$25" in respuesta
+    assert "remoto" in respuesta.lower()
+    assert LINK not in respuesta
+    assert estado["etapa"] == "listo"
+
+
 async def test_pide_humano_no_revela_mas_de_la_linea():
     await turno("hola")
     respuesta, _estado, real = await turno("¿puedo hablar con una persona del equipo?")
@@ -218,5 +237,5 @@ async def test_no_hay_horario_el_bot_responde_siempre():
 @pytest.mark.parametrize("texto", ["hola", "Hola!", "buenas", "hey"])
 async def test_saludos_inician_el_flujo(texto):
     respuesta, estado, _real = await turno(texto)
-    assert respuesta.startswith("Hola, te escribe")
+    assert respuesta.startswith("Hola, le escribe")
     assert estado["etapa"] == "inicio"

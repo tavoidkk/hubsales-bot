@@ -34,6 +34,11 @@ os.environ["FORM_LINK"] = "https://formulario.ejemplo.test/registro"
 # La rama con IA se prueba con un modelo falso en tests/test_ia.py.
 os.environ["IA_MODO"] = "determinista"
 os.environ["LLM_PROVIDER"] = ""
+# Aislar las pruebas de las credenciales reales del .env: el proveedor Zernio
+# filtra por accountId y un id real haría fallar los payloads de prueba.
+os.environ["ZERNIO_API_KEY"] = ""
+os.environ["ZERNIO_WEBHOOK_SECRET"] = ""
+os.environ["ZERNIO_ACCOUNT_ID"] = ""
 os.environ.pop("BOT_NAME", None)
 
 

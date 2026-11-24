@@ -78,12 +78,14 @@ CLAVES_CONTEXTO = (
     "sobre la oferta", "hablan de la oferta", "de que trata",
     "hablame de la oferta", "contame la oferta", "cuentame la oferta",
     "explicame la oferta", "de la oferta", "la oferta",
+    "precio", "precios", "mas informacion", "saber mas",
 )
 INTERROGATIVAS = (
     "cuanto", "que es", "de que", "como es", "cuales", "cual ", "donde", "cuando",
     "detalle", "informacion", "contexto", "dime", "decime", "cuentame",
     "contame", "hablame", "explica", "explicame", "que ofrecen", "como funciona",
-    "que pay", "que tal", "cuenta",
+    "que pay", "que tal", "cuenta", "precio", "precios", "me das", "me comparte",
+    "me indica", "quisiera saber", "necesito saber", "quiero saber", "saber",
 )
 
 CLAVES_LINK = (
@@ -331,8 +333,13 @@ def _pide_contexto(texto: str) -> bool:
 
 
 def _pide_link(texto: str) -> bool:
+    """Busca palabras completas: "información" NO es un pedido de "form"."""
     plano = _sin_acentos(texto)
-    return any(clave in plano for clave in CLAVES_LINK)
+    for clave in CLAVES_LINK:
+        patron = rf"(?<![a-z0-9]){re.escape(_sin_acentos(clave))}(?![a-z0-9])"
+        if re.search(patron, plano):
+            return True
+    return False
 
 
 def _pide_humano(texto: str) -> bool:
@@ -470,7 +477,8 @@ def _preparar_texto(accion: str, texto: str) -> str:
             base = texto.rstrip()
             if not base:
                 texto = link
-            elif base.endswith((".", "!", "?")):
+            elif base.endswith((".", "!", "?", ":", ";")):
+                # Ya trae puntuación de cierre: no le agregamos otro punto.
                 texto = f"{base} {link}"
             else:
                 texto = f"{base}. {link}"
@@ -547,6 +555,7 @@ def _sin_pedir_datos(texto: str, estado: Dict[str, Any]) -> str:
         pide_nombre = "nombre" in baja or "llam" in baja
         pide_confirmacion = (
             "confirm" in baja
+            or "viene por la oferta" in baja
             or "vienes por la oferta" in baja
             or "venis por la oferta" in baja
         )

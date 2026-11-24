@@ -96,7 +96,7 @@ async def test_inyeccion_no_cambia_el_estado_ni_entrega_el_link():
 async def test_mensaje_enorme_no_ecorea_ni_sale_de_la_linea():
     respuesta, estado, _real = await turno("quiero " + ("a" * 3000))
 
-    assert "Solo puedo ayudarte con la oferta de vendedor que publicamos" in respuesta
+    assert "Solo puedo ayudarle con la oferta de vendedor que publicamos" in respuesta
     assert len(respuesta) < 200
     assert estado["etapa"] == "inicio"
 

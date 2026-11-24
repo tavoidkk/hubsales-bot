@@ -64,7 +64,7 @@ def test_webhook_encola_y_el_flujo_responde():
 
     enviados = obtener_enviados()
     assert len(enviados) == 1
-    assert enviados[0]["mensaje"].startswith("Hola, te escribe Sofía, reclutadora")
+    assert enviados[0]["mensaje"].startswith("Hola, le escribe Sofía, reclutadora")
 
 
 def test_webhook_duplicado_no_se_procesa():
