@@ -92,7 +92,7 @@ async def test_ia_no_puede_decir_que_es_bot(monkeypatch):
     respuesta, _estado, _real = await turno("¿qué tal?")
 
     assert "Soy un bot" not in respuesta
-    assert "¿Me dices tu nombre, por favor?" in respuesta
+    assert "¿Me decís tu nombre, por favor?" in respuesta
 
 
 async def test_ia_no_puede_preguntar_si_completo_el_formulario(monkeypatch):
@@ -165,7 +165,7 @@ async def test_inyeccion_no_llama_a_la_ia(monkeypatch):
 async def test_ia_escribe_tambien_el_primer_mensaje(monkeypatch):
     saludo = (
         "¡Hola! Soy Sofía, reclutadora en HubSales Group. "
-        "¿Cómo te llamás y confirmás que vienes por la oferta publicada?"
+        "¿Cómo te llamás y me confirmás que venís por la oferta publicada?"
     )
     con_ia(monkeypatch, [("pedir_nombre", saludo)])
 
@@ -205,7 +205,7 @@ async def test_ia_no_puede_prometer_el_formulario_sin_entregarlo(monkeypatch):
 
     assert "me faltó" not in respuesta
     assert "Acá va" not in respuesta
-    assert "¿Me dices tu nombre" in respuesta
+    assert "¿Me decís tu nombre" in respuesta
 
 
 async def test_despedida_no_menciona_celular():
@@ -284,6 +284,20 @@ async def test_ingles_despues_del_formulario_no_reenvia_link():
     assert real is False
 
 
+async def test_ia_no_reenvia_el_link_si_no_lo_piden(monkeypatch):
+    """Aunque el modelo quiera reenviar, sin pedido explícito no se repite."""
+    await turno("hola")
+    await turno("Ana")
+    await turno("sí")
+    con_ia(monkeypatch, [("reenviar_link", f"Acá va de nuevo: {LINK}")])
+
+    respuesta, estado, _real = await turno("ok")
+
+    assert LINK not in respuesta
+    assert "formulario" not in respuesta.lower()
+    assert estado["etapa"] == "listo"
+
+
 async def test_texto_plano_se_acepta_y_la_accion_la_decide_el_codigo(monkeypatch):
     """Si el modelo ignora el JSON, se usa su redacción con una acción segura."""
     await turno("hola")
@@ -320,5 +334,5 @@ async def test_sin_ia_funciona_igual(monkeypatch):
     await turno("hola")
     respuesta, _estado, real = await turno("Ana")
 
-    assert "¿Confirmas que vienes por la oferta de vendedor que publicamos?" in respuesta
+    assert "¿Me confirmás que venís por la oferta de vendedor que publicamos?" in respuesta
     assert real is True

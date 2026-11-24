@@ -5,8 +5,10 @@ pide nombre, confirma que la persona viene por **la oferta de vendedor que publi
 y le entrega el formulario `https://forms.gle/dW6Dj8XXJhzhZims7`.
 
 - No se presenta como bot ni como IA: es Sofía, reclutadora de HubSales Group.
-- Solo habla español y mensajes cortos de WhatsApp, sin markdown.
+- Habla español con voseo argentino, en mensajes cortos de WhatsApp, sin markdown.
 - La IA redacta; `agent/flow.py` decide la acción y aplica las reglas (guardrails).
+- El formulario se entrega una sola vez. Después solo se reenvía si la persona lo
+  pide explícitamente; el resto de los mensajes recibe un cierre corto.
 - Datos de la oferta, solo si preguntan. Más información, solo si los contacta el equipo.
 - Comparte cuenta de Zernio con el bot de Toyota, pero usa **otro número** y otro
   `ZERNIO_WEBHOOK_SECRET`. El webhook se filtra por `accountIds` y el código vuelve a

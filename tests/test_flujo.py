@@ -32,13 +32,16 @@ async def test_saludo_exacto_y_sin_ia():
 
     assert respuesta == (
         "Hola, te escribe Sofía, reclutadora en HubSales Group. "
-        "¿Me podrías indicar tu nombre y confirmarme que vienes por la oferta de vendedor que publicamos?"
+        "¿Me decís tu nombre y me confirmás que venís por la oferta de vendedor que publicamos?"
     )
     assert estado["etapa"] == "inicio"
     assert real is True
     plano = _sin_acentos(respuesta)
     assert "bot" not in plano
     assert "inteligencia artificial" not in plano
+    # Tono argentino: voseo, no "tú".
+    assert "decís" in respuesta and "venís" in respuesta
+    assert "dices" not in plano and "vienes" not in plano
 
 
 async def test_nombre_personalizable_por_env(monkeypatch):
@@ -52,7 +55,7 @@ async def test_flujo_nombre_luego_confirmacion():
     pedir_conf, e2, _r2 = await turno("Ana")
 
     assert saludo.startswith("Hola, te escribe")
-    assert pedir_conf == "¿Confirmas que vienes por la oferta de vendedor que publicamos?"
+    assert pedir_conf == "¿Me confirmás que venís por la oferta de vendedor que publicamos?"
     assert e2["etapa"] == "esperando_confirmacion"
     assert e2["nombre"] == "Ana"
 
@@ -71,7 +74,7 @@ async def test_flujo_confirmacion_luego_nombre():
     pedir_nombre, e1, _r1 = await turno("sí, vengo por la oferta publicada")
     despedida, e2, _r2 = await turno("me llamo Marta López")
 
-    assert pedir_nombre == "¿Me dices tu nombre, por favor?"
+    assert pedir_nombre == "¿Me decís tu nombre, por favor?"
     assert e1["etapa"] == "esperando_nombre"
     assert e1["confirmo"] is True
     assert "Marta López" in despedida
@@ -166,6 +169,21 @@ async def test_despues_de_listo_agradecimiento_no_genera_respuesta():
 
     assert respuesta == ""
     assert real is False
+
+
+async def test_despues_del_formulario_no_repite_el_link():
+    """El bug reportado: después del formulario lo mandaba en cada mensaje."""
+    await turno("hola")
+    await turno("Ana")
+    await turno("sí")
+    respuesta, estado, _real = await turno("ok, ya está")
+
+    assert LINK not in respuesta
+    assert "formulario" not in respuesta.lower()
+    assert "nombre" not in respuesta.lower()
+    assert "confirm" not in respuesta.lower()
+    assert estado["etapa"] == "listo"
+    assert estado["nombre"] == "Ana"
 
 
 async def test_pide_humano_no_revela_mas_de_la_linea():

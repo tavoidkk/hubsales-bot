@@ -90,6 +90,8 @@ CLAVES_LINK = (
     "link", "enlace", "formulario", "form", "pasame", "pasarme", "mandame",
     "mandarme", "envíame", "enviamne", "envia me", "acceso", "inscribirme",
     "inscripcion", "donde me anoto", "donde aplico",
+    # Después de recibir el formulario, "no lo veo" es una forma de pedirlo.
+    "no lo veo", "no lo encuentro", "no me llego", "no aparece", "no lo recibi",
 )
 
 CLAVES_HUMANO = (
@@ -375,9 +377,13 @@ def _accion_determinista(
     if senales["pide_humano"]:
         return "humano"
     if etapa == "listo":
+        # El formulario se entrega UNA vez. Solo se reenvía si lo piden de nuevo;
+        # para cualquier otro mensaje alcanza con un cierre corto, sin enlace.
+        if senales["pide_link"]:
+            return "reenviar_link"
         if senales["es_agradecimiento"]:
             return "sin_responder"
-        return "reenviar_link"
+        return "post_formulario"
     if not nombre and not confirmo and not senales["es_saludo"]:
         if _es_fuera(texto) or len(texto.strip()) > 120:
             return "fuera_de_linea"
@@ -419,10 +425,17 @@ def _forzar_accion(
         if not confirmo:
             return "pedir_confirmacion"
 
-    if senales.get("pide_link") and link_enviado:
-        return "reenviar_link"
-    if accion == "entregar_formulario" and link_enviado:
-        return "reenviar_link"
+    if link_enviado:
+        # Con el formulario ya entregado, el bot no puede volver a pedir nombre
+        # ni confirmación, ni reenviar el enlace en cada mensaje. Solo lo manda
+        # otra vez si la persona lo pide explícitamente.
+        if senales.get("pide_link"):
+            return "reenviar_link"
+        if accion in (
+            "entregar_formulario", "reenviar_link", "continuar",
+            "pedir_nombre", "pedir_confirmacion",
+        ):
+            return "post_formulario"
     if accion == "contexto" and not senales.get("pide_contexto"):
         # La IA no puede entregar datos de la oferta si no se los pidieron.
         return "fuera_de_linea"
@@ -532,7 +545,11 @@ def _sin_pedir_datos(texto: str, estado: Dict[str, Any]) -> str:
     for parte in partes:
         baja = _sin_acentos(parte)
         pide_nombre = "nombre" in baja or "llam" in baja
-        pide_confirmacion = "confirm" in baja or "vienes por la oferta" in baja
+        pide_confirmacion = (
+            "confirm" in baja
+            or "vienes por la oferta" in baja
+            or "venis por la oferta" in baja
+        )
         if pide_nombre and pide_confirmacion:
             continue
         utiles.append(parte)
@@ -565,6 +582,10 @@ def respuesta_determinista(
         if not link:
             return mensaje("sin_link", nombre=nombre)
         return mensaje("reenviar_link", link=link)
+    if accion == "post_formulario":
+        if nombre:
+            return mensaje("post_formulario", nombre=nombre)
+        return mensaje("post_formulario_sin_nombre")
     if accion == "contexto":
         datos = contexto_oferta()
         if estado.get("contexto_dado"):
@@ -650,9 +671,14 @@ async def procesar_turno(
     es_pregunta = any(
         (senales["pide_contexto"], senales["pide_link"], senales["pide_humano"])
     )
-    extraido = _extraer_nombre(
-        texto, str(estado.get("etapa") or "inicio"), solo_explicito=es_pregunta
-    )
+    # Después de entregar el formulario ya no se buscan nombres: cualquier
+    # frase corta ("ok, ya está") se tomaría como nombre y el bot quedaría
+    # saludando a una persona inventada.
+    extraido = ""
+    if not estado.get("link_enviado"):
+        extraido = _extraer_nombre(
+            texto, str(estado.get("etapa") or "inicio"), solo_explicito=es_pregunta
+        )
     if extraido:
         nombre = extraido
     confirmo = bool(estado.get("confirmo")) or _confirma(texto)
@@ -686,7 +712,12 @@ async def procesar_turno(
         texto_ia = ""
         accion = "saludo"
 
+    accion_ia = accion
     accion = _forzar_accion(accion, estado, senales)
+    if accion == "post_formulario" and accion_ia != "post_formulario":
+        # La IA quería reenviar o volver a pedir datos: se descarta su texto y
+        # se usa el cierre corto, que no repite el enlace.
+        texto_ia = ""
 
     if accion == "sin_responder":
         estado["saludado"] = True
