@@ -18,7 +18,9 @@ from agent.providers.base import MensajeEntrante, ProveedorWhatsApp
 
 logger = logging.getLogger("agentkit")
 
-BASE_URL_POR_DEFECTO = "https://zernio.com/api/v1"
+# OJO: `zernio.com/api/v1` no responde desde todas las redes (y su TLS falla
+# en algunos entornos). El endpoint real de la API es api.zernio.com/v1.
+BASE_URL_POR_DEFECTO = "https://api.zernio.com/v1"
 
 
 class ProveedorZernio(ProveedorWhatsApp):

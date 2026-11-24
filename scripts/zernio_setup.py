@@ -56,7 +56,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover
 
 load_dotenv(RAIZ / ".env")
 
-BASE_URL = (os.getenv("ZERNIO_BASE_URL") or "https://zernio.com/api/v1").rstrip("/")
+BASE_URL = (os.getenv("ZERNIO_BASE_URL") or "https://api.zernio.com/v1").rstrip("/")
 API_KEY = (os.getenv("ZERNIO_API_KEY") or "").strip()
 WEBHOOK_SECRET = (os.getenv("ZERNIO_WEBHOOK_SECRET") or "").strip()
 # Zernio permite limitar un webhook a ciertos números (accounts). Sin esto, un
@@ -117,11 +117,26 @@ async def estado() -> int:
         )
         print(
             f"  Número: {numero.get('phoneNumber') or numero.get('display_phone_number')}  "
-            f"({numero.get('country') or '?'}, {numero.get('type') or '?'})"
+            f"({numero.get('country') or '?'}, {numero.get('numberType') or numero.get('type') or '?'})"
         )
         print(f"    accountId: {account_id}")
     print(f"  Total de números: {len(numeros)}")
-    print(f"  ZERNIO_ACCOUNT_ID en .env: {ACCOUNT_ID or '(vacío)'}")
+
+    # OJO: el accountId que usa el webhook NO es el _id del número. Es el _id
+    # de la cuenta de WhatsApp que devuelve /accounts. Se listan para poder
+    # copiar el correcto sin adivinar.
+    codigo, cuentas = await _pedir("GET", "/accounts")
+    if codigo == 200:
+        print("\n  Cuentas conectadas (usar el _id de la de whatsapp):")
+        for cuenta in cuentas.get("accounts") or []:
+            if cuenta.get("platform") != "whatsapp":
+                continue
+            marca = " ← coincide con el .env" if cuenta.get("_id") == ACCOUNT_ID else ""
+            print(f"    {cuenta.get('_id')}  {cuenta.get('displayName') or cuenta.get('name') or ''}{marca}")
+    else:
+        _mostrar_error(codigo, cuentas)
+
+    print(f"\n  ZERNIO_ACCOUNT_ID en .env: {ACCOUNT_ID or '(vacío)'}")
 
     if sandbox.get("phoneNumber"):
         print(f"  Sandbox: {sandbox['phoneNumber']}  (solo pruebas)")
