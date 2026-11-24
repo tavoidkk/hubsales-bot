@@ -1,0 +1,17 @@
+services:
+  bot:
+    build: .
+    container_name: hubsales-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # La base vive en el volumen, no dentro de la imagen.
+      - DATABASE_URL=sqlite+aiosqlite:////data/hubsales.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - hubsales_data:/data
+
+volumes:
+  hubsales_data:

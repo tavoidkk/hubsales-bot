@@ -1,0 +1,28 @@
+# Secretos y datos locales
+.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Entornos y cachés
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Repositorio y docs
+.git/
+.github/
+docs/
+*.md
+
+# Pruebas (no se necesitan en la imagen)
+tests/
+pytest.ini
+
+# Sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,33 @@
+# HubSales Group — bot de reclutamiento
+# Generado por AgentKit. El agente de Don McGill no se modifica.
+
+negocio:
+  nombre: "HubSales Group"
+  descripcion: "Reclutamiento para una vacante publicada de ventana de ventas."
+  idioma: "es"
+
+agente:
+  # Nombre femenino. Se puede cambiar con BOT_NAME en el .env.
+  nombre: "Sofía"
+  rol: "reclutadora"
+  empresa: "HubSales Group"
+
+formulario:
+  # Formulario obligatorio. FORM_LINK (env / Coolify) tiene prioridad sobre este valor.
+  link: "https://forms.gle/dW6Dj8XXJhzhZims7"
+  nota: "El CV y los requisitos de la empresa se completan en el formulario externo."
+
+# Este bloque es INFORMACIÓN INTERNA: solo se menciona si el prospecto pregunta
+# por la oferta. Nunca se envía de forma espontánea.
+contexto_oferta:
+  puesto: "vendedor en un call center para vender seguros de KonnectMD en USA"
+  pago: "$25 por ventas"
+  pagos: "pagos semanales"
+  bonos: "bonificaciones por cumplimiento de metas"
+  modalidad: "trabajo remoto"
+  condiciones: "Ciertas condiciones aplican."
+  seguimiento: "Si el equipo de HubSales Group te contacta, te dará más información."
+
+metadata:
+  proveedor: "zernio"
+  version: "1.0"

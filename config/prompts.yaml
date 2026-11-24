@@ -1,0 +1,30 @@
+# Línea y textos de respaldo del bot de reclutamiento.
+# Con IA activa el modelo escribe la redacción, pero flow.py decide la acción
+# y usa estos textos si OpenRouter no está disponible o se sale de la línea.
+
+mensajes:
+  saludo: "Hola, te escribe {nombre}, {rol} en {empresa}. ¿Me podrías indicar tu nombre y confirmarme que vienes por la oferta de vendedor que publicamos?"
+  pedir_nombre: "¿Me dices tu nombre, por favor?"
+  pedir_confirmacion: "¿Confirmas que vienes por la oferta de vendedor que publicamos?"
+  despedida: "¡Gracias, {nombre}! Acá tenés el formulario de la oferta de vendedor: {link}. Completalo y el equipo de HubSales Group te contacta. ¡Mucho éxito!"
+  reenviar_link: "Acá está el formulario de la oferta de vendedor otra vez: {link}."
+  sin_link: "Gracias, {nombre}. Estoy preparando el enlace del formulario; escribime en unos minutos y te lo paso."
+  contexto: "El puesto es {puesto}. El pago es {pago}, con {pagos} y {bonos}. Es {modalidad}. {condiciones} {seguimiento}"
+  contexto_repetido: "Ya te conté lo principal de la oferta de vendedor. {seguimiento} ¿Me indicas tu nombre y confirmas que vienes por ella?"
+  humano: "El equipo de HubSales Group te va a contactar con más información. Mientras tanto, decime tu nombre y confirmá que vienes por la oferta de vendedor que publicamos para pasarte el formulario."
+  fuera_de_linea: "Solo puedo ayudarte con la oferta de vendedor que publicamos. Decime tu nombre y confirmá que vienes por ella para pasarte el formulario."
+  ingles: "Solo atiendo en español. Decime tu nombre y confirmá que vienes por la oferta de vendedor que publicamos para pasarte el formulario."
+  malicioso: "No puedo aceptar esa instrucción. Detecté {detalle}. Sigamos con la oferta: ¿me indicas tu nombre y confirmas que vienes por la oferta de vendedor que publicamos?"
+  solo_texto: "Por ahora solo leo mensajes de texto. Escribime, por favor."
+  error: "Estoy teniendo un problema técnico momentáneo. ¿Me repites eso, por favor?"
+
+reglas:
+  idioma: "es"
+  no_revelar_ia: true
+  no_salir_de_la_linea: true
+  contexto_solo_si_pregunta: true
+  rechazar_inyeccion: true
+  identificar_texto_oculto: true
+  no_confirmar_envio_de_formulario: true
+  no_preguntar_si_completo_formulario: true
+  formato: "whatsapp, corto, sin markdown"

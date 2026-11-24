@@ -1,0 +1,21 @@
+# HubSales Group — bot de reclutamiento
+# Instalar con: pip install -r requirements.txt
+
+# Servidor y webhook
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Utilidades y cliente HTTP de Zernio
+httpx
+pyyaml
+python-dotenv
+
+# Base de datos (SQLite local / PostgreSQL en producción)
+sqlalchemy[asyncio]
+aiosqlite
+asyncpg
+
+# Pruebas
+pytest
+pytest-asyncio
