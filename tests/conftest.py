@@ -30,6 +30,7 @@ os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_DB.as_posix()}"
 os.environ["ENVIRONMENT"] = "test"
 os.environ["WHATSAPP_PROVIDER"] = "mock"
 os.environ["FORM_LINK"] = "https://formulario.ejemplo.test/registro"
+os.environ["FORM_LINK_ALTERNATIVO"] = "https://alternativo.ejemplo.test/formulario"
 # Las pruebas son deterministas y no gastan créditos de OpenRouter.
 # La rama con IA se prueba con un modelo falso en tests/test_ia.py.
 os.environ["IA_MODO"] = "determinista"

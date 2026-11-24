@@ -6,13 +6,18 @@ mensajes:
   saludo: "Hola, le escribe {nombre}, {rol} en {empresa}. ¿Me podría indicar su nombre y confirmarme que viene por la oferta de vendedor que publicamos?"
   pedir_nombre: "¿Me podría indicar su nombre, por favor?"
   pedir_confirmacion: "¿Me confirma que viene por la oferta de vendedor que publicamos?"
-  despedida: "Muchas gracias, {nombre}. Este es el formulario de la oferta de vendedor: {link}. Complete sus datos y el equipo de HubSales Group se comunicará con usted. ¡Éxitos!"
-  reenviar_link: "Con gusto. Este es el formulario de la oferta de vendedor nuevamente: {link}."
-  post_formulario: "Perfecto, {nombre}. El equipo de HubSales Group se comunicará con usted. Quedo atento a cualquier consulta."
-  post_formulario_sin_nombre: "Perfecto. El equipo de HubSales Group se comunicará con usted. Quedo atento a cualquier consulta."
+  despedida: "Muchas gracias, {nombre}. Este es el formulario de la oferta de vendedor: {link}. Complete sus datos y el equipo de HubSales Group se comunicará con usted. Quedo atenta. ¡Éxitos!"
+  reenviar_link: "Con gusto. Este es el formulario de la oferta de vendedor nuevamente: {link}. Quedo atenta."
+  post_formulario: "Perfecto, {nombre}. El equipo de HubSales Group se comunicará con usted. Quedo atenta a cualquier consulta."
+  post_formulario_sin_nombre: "Perfecto. El equipo de HubSales Group se comunicará con usted. Quedo atenta a cualquier consulta."
   sin_link: "Gracias, {nombre}. Estoy preparando el enlace del formulario; escríbame en unos minutos y se lo envío."
   contexto: "El puesto es {puesto}. El pago es {pago}, con {pagos} y {bonos}. La modalidad es {modalidad}. {condiciones} {seguimiento}"
-  contexto_repetido: "Ya le compartí los principales detalles de la oferta de vendedor. {seguimiento} ¿Me indica su nombre y me confirma que viene por ella?"
+  # Si vuelve a preguntar, se vuelven a dar los datos: la persona puede no
+  # haberlos leído. Ya no se le pide el nombre ni la confirmación otra vez.
+  contexto_repetido: "Con gusto, le repito los datos de la oferta de vendedor. El puesto es {puesto}. El pago es {pago}, con {pagos} y {bonos}. La modalidad es {modalidad}. {condiciones} {seguimiento}"
+  # Texto de emergencia: la redacción normal la escribe la IA según el error
+  # concreto. Este se usa solo si OpenRouter no responde o se sale de la línea.
+  error_formulario: "Lamento el inconveniente. Le sugiero abrir el enlace del formulario en una ventana de incógnito con una sola sesión de Google activa y renombrar su PDF sin paréntesis ni caracteres especiales, por ejemplo CV_Nombre_2026.pdf. Si sigue fallando, puede usar este enlace alternativo: {link_alternativo}"
   humano: "El equipo de HubSales Group se comunicará con usted con más información. Mientras tanto, indíqueme su nombre y confirme que viene por la oferta de vendedor que publicamos para enviarle el formulario."
   fuera_de_linea: "Solo puedo ayudarle con la oferta de vendedor que publicamos. Indíqueme su nombre y confirme que viene por ella para enviarle el formulario."
   ingles: "Solo atiendo en español. Indíqueme su nombre y confirme que viene por la oferta de vendedor que publicamos para enviarle el formulario."
@@ -26,8 +31,10 @@ reglas:
   no_revelar_ia: true
   no_salir_de_la_linea: true
   contexto_solo_si_pregunta: true
+  contexto_siempre_si_pregunta: true
   rechazar_inyeccion: true
   identificar_texto_oculto: true
   no_confirmar_envio_de_formulario: true
   no_preguntar_si_completo_formulario: true
+  no_ofrecer_envio_por_whatsapp: true
   formato: "whatsapp, corto, sin markdown"

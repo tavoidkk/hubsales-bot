@@ -18,7 +18,13 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Tuple
 
-from .config import contexto_oferta, identidad, link_formulario, mensaje
+from .config import (
+    contexto_oferta,
+    identidad,
+    link_formulario,
+    link_formulario_alternativo,
+    mensaje,
+)
 from .ia import generar_respuesta_ia, ia_disponible
 from .memory import estado_vacio, get_estado, guardar_estado
 
@@ -101,6 +107,22 @@ CLAVES_HUMANO = (
     "agente real", "alguien del equipo", "un asesor",
 )
 
+# Problemas reales reportados por el prospecto. Se detectan ANTES de cualquier
+# cierre: si el formulario falló, no podemos decir que la postulación sigue
+# adelante como si nada hubiera pasado.
+CLAVES_ERROR_FORMULARIO = (
+    "me da error", "me dio error", "me sale error", "me tira error", "da error",
+    "no me deja", "no me permite", "no puedo subir", "no puedo adjuntar",
+    "no carga el archivo", "no me carga", "no se carga", "no se sube",
+    "operacion rechazada", "operación rechazada", "rechaza el archivo",
+    "falla el formulario", "falla el link", "el link no funciona",
+    "el enlace no funciona", "no abre el link", "no abre el enlace",
+    "no puedo completar", "no puedo acceder", "error al enviar",
+    "error al subir", "error al cargar", "se cayo el link", "se cayó el link",
+    "no funciona el formulario", "no me deja subir", "no me deja adjuntar",
+    "formulario roto", "no me abre", "no me deja entrar",
+)
+
 AFIRMATIVAS = (
     "s", "si", "sii", "dale", "ok", "okey", "claro", "correcto", "exacto",
     "de acuerdo", "asi es", "confirmo", "confirmado", "afirmativo", "si es",
@@ -116,7 +138,27 @@ NO_NOMBRE = {
     "gracias", "hola", "buenas", "buenos", "confirmo", "s", "si", "sí",
     "hey", "hi", "hello", "que", "tal", "vale", "ok",
     "quiero", "necesito", "busco", "dame", "pasa", "tengo",
+    "vengo", "vine", "voy", "sobre", "bajo", "por", "para", "de", "del",
+    "vacante", "oferta", "publicada", "publicado", "puesto", "puedo",
+    "postularme", "postular", "recibir", "formulario", "link", "enlace",
+    "buen", "dia", "día", "tarde", "mañana", "noche", "todo", "bien",
+    "tambien", "también", "asi", "así", "bueno", "perfecto", "listo",
 }
+
+# Se quitan de los bordes antes de decidir si lo que queda es un nombre.
+CONECTORES_NOMBRE = {
+    "y", "e", "tambien", "también", "pues", "bien", "entonces", "asi que",
+    "bueno", "mira", "buenas", "hola", "hey",
+}
+
+# El nombre puede venir pegado a la confirmación: se corta antes de estas
+# palabras para que "Valeria, y si, vengo por eso" dé solo "Valeria".
+MARCADORES_CORTE = (
+    r"\b(?:s[ií]|confirmo|vale|dale|ok|claro)\b",
+    r"\b(?:vengo|vine|viene)\s+(?:por|por la)\b",
+    r"\b(?:sobre|por|de)\s+la\s+(?:vacante|oferta|publicaci[oó]n)\b",
+    r"\b(?:la\s+)?oferta\s+de\s+vendedor\b",
+)
 
 NOMBRE_RE = re.compile(
     r"\b(?:me llamo|mi nombre es|soy|nombre)\s+"
@@ -158,14 +200,39 @@ DATOS_NO_AUTORIZADOS = (
 # La IA no puede decir "te paso el formulario" si la acción no es de entrega:
 # antes pasaba y el candidato veía un mensaje prometiendo el link sin link.
 PROMESA_FORMULARIO = (
-    r"(te|les)\s+(dejo|paso|mando|envio|acompanio)\s+(el\s+)?(formulario|link|enlace)",
+    r"(te|les|le)\s+(dejo|paso|mando|envio|acompanio|comparto)\s+(el\s+)?(formulario|link|enlace)",
     r"ac[aa]\s+(va|tenes|esta)\s+(el\s+)?(formulario|link|enlace)",
     r"aqui\s+(va|esta)\s+(el\s+)?(formulario|link|enlace)",
-    r"(formulario|link|enlace)\s+(para\s+)?(que\s+)?(completes|llenes|veas)",
+    r"(formulario|link|enlace)\s+(para\s+)?(que\s+)?(completes|llenes|veas|lo\s+complete)",
     r"completa(lo|r)?\s+(el\s+)?formulario",
+    r"complete\s+(el\s+)?formulario",
+    r"para\s+que\s+lo\s+complete",
     r"me\sfalto\s+el\s+enlace",
     r"copialo\s+en\s+el\s+navegador",
     r"te\s+lo\s+paso\s+de\s+nuevo",
+)
+
+# El dueño pidió expresamente no ofrecer el envío del CV por WhatsApp.
+OFRECER_ENVIO = (
+    r"(te|le|les)\s+(envio|envi[oó]|mando|paso|adjunto|hago\s+llegar)\s+"
+    r"(el\s+|su\s+|tu\s+)?(cv|curriculum|pdf|archivo|formulario)",
+    r"(enviamelo|mandamelo|pasamelo|adjuntamelo)\s+por\s+(aqui|aquí|whatsapp|este\s+chat)",
+    r"por\s+(este\s+|el\s+)?(chat|whatsapp|aqui|aquí)",
+)
+
+# Ingredientes que la respuesta de error debe tener, la escriba la IA o no.
+INGREDIENTES_ERROR = {
+    "disculpa": r"(lamento|perdon|perd[oó]n|disculpa|lo\s+siento|inconveniente)",
+    "incognito": r"(inc[oó]gnito|modo\s+privado)",
+    "google": r"(sesion|sesi[oó]n)\s+de\s+google",
+    "pdf": r"\bpdf\b",
+    "renombrar": r"(renombr|nombr|guarda|llama|sin\s+par[ée]ntesis|caracteres\s+especiales)",
+}
+
+# Un JSON a medio escribir no puede llegar al cliente aunque pase _sanitizar.
+JSON_ROTO = re.compile(
+    r'\{\s*["\']?(?:accion|texto)["\']?\s*:|["\'](?:accion|texto)["\']\s*:',
+    re.IGNORECASE,
 )
 
 # El usuario pidió que el formulario se complete sin decir desde dónde ni con qué.
@@ -237,37 +304,53 @@ def _es_afirmativa(texto: str) -> bool:
 
 
 def _confirma(texto: str) -> bool:
-    """True solo ante una aceptación clara de la oferta publicada."""
+    """True ante una aceptación clara de la oferta publicada.
+
+    Acepta también las formas que la gente usa en WhatsApp sin escribir "sí":
+    "vengo por eso", "si por la vacante", "oferta de vendedor", etc.
+    Una pregunta ("¿de qué trata la oferta de vendedor?") NUNCA confirma.
+    """
     frase = _frase(texto)
-    if any(x in frase for x in (" no vengo", " no es", " no confirmo", " no gracias", " no interesa")):
-        return False
     if any(
         x in frase
-        for x in (
-            " vengo por la oferta",
-            " vine por la oferta",
-            " vengo por la publicad",
-            " por la oferta publicada",
-            " por la oferta de vendedor",
-            " confirmo que vengo",
-        )
+        for x in (" no vengo", " no es", " no confirmo", " no gracias", " no interesa")
     ):
-        return True
+        return False
     if re.search(r"\b(?:si|sí)\s+(?:vengo|vine|confirmo)\b", frase):
         return True
     if _es_afirmativa(texto):
         return True
     # "Gustavo Vidal, sí" y "Gustavo vidal si" también son confirmación:
     # el nombre y el "sí" vinieron juntos en un solo mensaje.
-    corto = frase.strip()
-    palabras = corto.split()
+    palabras = frase.strip().split()
     if (
         "?" not in texto
-        and 1 < len(palabras) <= 8
+        and 1 < len(palabras) <= 10
         and palabras[-1] in AFIRMATIVAS_SUELTAS
     ):
         return True
-    return False
+    if "?" in texto:
+        return False
+    confirmadores = (
+        " vengo por eso",
+        " vine por eso",
+        " vengo por la oferta",
+        " vine por la oferta",
+        " vengo por la vacante",
+        " vine por la vacante",
+        " vengo por el puesto",
+        " por la oferta publicada",
+        " por la oferta de vendedor",
+        " sobre la vacante",
+        " por la vacante",
+        " la vacante de vendedor",
+        " oferta de vendedor",
+        " por la publicad",
+        " es por la oferta",
+        " confirmo que vengo",
+        " asi es",
+    )
+    return any(clave in frase for clave in confirmadores)
 
 
 def _recortar_afirmativas(palabras: list[str]) -> list[str]:
@@ -283,18 +366,65 @@ def _recortar_afirmativas(palabras: list[str]) -> list[str]:
     return palabras
 
 
+def _recortar_conectores(palabras: list[str]) -> list[str]:
+    """Quita saludos y conectores de los bordes: 'hola María José' -> 'María José'."""
+    mientras = True
+    while mientras and palabras:
+        mientras = False
+        for indice in (0, -1):
+            if _sin_acentos(palabras[indice].strip(".,!?¿")) in CONECTORES_NOMBRE:
+                palabras.pop(indice)
+                mientras = True
+                break
+    return palabras
+
+
+def _limpiar_citas(texto: str) -> str:
+    """
+    WhatsApp puede mandar la respuesta citada dentro del mismo texto:
+
+        You
+        Hola, le escribe Sofía, reclutadora...
+        José Luis Rivera, si sobre la vacante de vendedor
+
+    Nos quedamos solo con lo que escribió la persona, nunca con la cita.
+    """
+    lineas = [linea.strip() for linea in (texto or "").splitlines() if linea.strip()]
+    if len(lineas) < 2:
+        return texto or ""
+
+    nombre_bot, _rol, _empresa = identidad()
+    presentacion = f"le escribe {_sin_acentos(nombre_bot)}"
+    utiles = []
+    for linea in lineas:
+        baja = _sin_acentos(linea)
+        es_cita = (
+            linea.startswith(">")
+            or re.match(r"^(you|tu|t[uú]|usted|agente|asistente)\b", baja) is not None
+            or presentacion in baja
+        )
+        if not es_cita:
+            utiles.append(linea)
+    if not utiles:
+        return lineas[-1]
+    return " ".join(utiles)
+
+
 def _nombre_limpio(palabras: list[str]) -> str:
-    """Devuelve el nombre con mayúsculas correctas: 'gustavo vidal' -> 'Gustavo Vidal'."""
-    return " ".join(palabra.title() for palabra in palabras[:2]).strip(".,!?")
+    """Nombre con mayúsculas correctas. Acepta hasta tres palabras ('José Luis Rivera')."""
+    return " ".join(palabra.title() for palabra in palabras[:3]).strip(".,!?")
 
 
 def _extraer_nombre(texto: str, etapa: str, solo_explicito: bool = False) -> str:
-    coincidencia = NOMBRE_RE.search(texto or "")
+    texto = _limpiar_citas(texto or "")
+
+    coincidencia = NOMBRE_RE.search(texto)
     if coincidencia:
         partes = coincidencia.group(1).split()
         while partes and partes[0].lower() in NO_NOMBRE:
             partes.pop(0)
         partes = _recortar_afirmativas(partes)
+        partes = _recortar_conectores(partes)
         if partes:
             return _nombre_limpio(partes)
 
@@ -303,23 +433,33 @@ def _extraer_nombre(texto: str, etapa: str, solo_explicito: bool = False) -> str
         return ""
 
     # El nombre y la confirmación pueden venir juntos en cualquier orden:
-    # "Gustavo Vidal, sí", "sí, Gustavo Vidal" o "Gustavo, sí, vengo por la oferta".
-    candidatos = [texto or ""]
-    candidatos.extend(
-        re.split(
-            r"\b(?:sí|si|confirmo|vale|dale|ok|claro)\b",
-            texto or "",
-            flags=re.IGNORECASE,
-        )
-    )
+    # "Gustavo Vidal, sí", "sí, Gustavo Vidal" o "Valeria, y si, vengo por eso".
+    candidatos = [texto]
+    for marcador in MARCADORES_CORTE:
+        candidatos.extend(re.split(marcador, texto, flags=re.IGNORECASE))
 
     for candidato in candidatos:
         limpio = re.sub(r"[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’\- ]+", " ", candidato).strip()
         palabras = _recortar_afirmativas(limpio.split())
-        if 1 <= len(palabras) <= 2 and all(2 <= len(p) <= 20 for p in palabras):
-            if _sin_acentos(palabras[0]) not in NO_NOMBRE:
+        palabras = _recortar_conectores(palabras)
+        if 1 <= len(palabras) <= 3 and all(2 <= len(p) <= 20 for p in palabras):
+            if all(_sin_acentos(palabra) not in NO_NOMBRE for palabra in palabras):
                 return _nombre_limpio(palabras)
     return ""
+
+
+def _detecta_error_formulario(texto: str) -> bool:
+    """El prospecto reportó un fallo con el enlace, el formulario o el archivo."""
+    plano = _frase(texto)
+    if any(_sin_acentos(clave) in plano for clave in CLAVES_ERROR_FORMULARIO):
+        return True
+    return bool(
+        re.search(
+            r"(error|falla|fallo|rechaz|no\s+carga|no\s+abre|no\s+funciona)"
+            r"[^.?!]{0,30}(formulario|link|enlace|archivo|cv|pdf|subir|adjuntar)",
+            plano,
+        )
+    )
 
 
 def _pide_contexto(texto: str) -> bool:
@@ -379,6 +519,8 @@ def _accion_determinista(
 ) -> str:
     """Decide la acción sin IA. Es el modo por defecto en tests y respaldo."""
     etapa = str(estado.get("etapa") or "inicio")
+    if senales.get("error_formulario"):
+        return "error_formulario"
     if senales["pide_contexto"]:
         return "contexto"
     if senales["pide_humano"]:
@@ -417,6 +559,16 @@ def _forzar_accion(
     confirmo = bool(estado.get("confirmo"))
     link_enviado = bool(estado.get("link_enviado"))
 
+    # Un problema con el formulario se atiende antes que cualquier cierre:
+    # nunca decimos "listo" cuando la persona no pudo completarlo.
+    if senales.get("error_formulario"):
+        return "error_formulario"
+
+    # Si preguntan por la oferta, se la damos siempre: antes del formulario,
+    # después del formulario y aunque ya se la hayamos contado.
+    if senales.get("pide_contexto"):
+        return "contexto"
+
     # El formulario es obligatorio y va apenas tengamos los dos datos.
     if nombre and confirmo and not link_enviado:
         return "entregar_formulario"
@@ -452,9 +604,16 @@ def _forzar_accion(
 def _sanitizar(texto: str) -> str:
     """Limpia el texto de la IA. Devuelve '' si debe descartarse."""
     texto = unicodedata.normalize("NFKC", texto or "").strip()
+    if texto[0] in "{[" or JSON_ROTO.search(texto):
+        # Un JSON truncado nunca se muestra al prospecto. El JSON válido ya
+        # fue convertido en (acción, texto) por ia.py antes de llegar acá.
+        return ""
     texto = re.sub(r"https?://\S+", "", texto)  # se vuelve a poner el enlace oficial
     texto = re.sub(r"(?m)^\s*[-#>]\s+", "", texto)
-    texto = re.sub(r"[`*_]", "", texto)
+    texto = re.sub(r"[`*]", "", texto)
+    # Los guiones bajos dentro de un nombre de archivo son parte del nombre
+    # (CV_Nombre_2026.pdf). Solo se quitan los que marcan énfasis en markdown.
+    texto = re.sub(r"(?<!\w)_|_(?!\w)", "", texto)
     texto = re.sub(r"\s+", " ", texto).strip()
     if not texto or len(texto) > 500:
         return ""
@@ -466,28 +625,55 @@ def _sanitizar(texto: str) -> str:
 
 
 def _preparar_texto(accion: str, texto: str) -> str:
+    # La entrega y el reenvío usan la plantilla fija de prompts.yaml. Así el
+    # enlace forms.gle y el "Quedo atenta" no dependen de lo que escriba el
+    # modelo (era exactamente donde se perdía el link).
+    if accion in ("entregar_formulario", "reenviar_link"):
+        return ""
+
     texto = _sanitizar(texto)
     if not texto:
         return ""
-    link = link_formulario()
-    if accion in ("entregar_formulario", "reenviar_link"):
-        if not link:
+
+    if accion == "error_formulario":
+        # En el error la redacción SÍ la escribe la IA, adaptada al problema.
+        # El enlace alternativo lo pone el código, nunca el modelo.
+        alternativo = link_formulario_alternativo()
+        if not alternativo:
             return ""
-        if link not in texto:
+        if alternativo not in texto:
             base = texto.rstrip()
             if not base:
-                texto = link
+                texto = alternativo
             elif base.endswith((".", "!", "?", ":", ";")):
-                # Ya trae puntuación de cierre: no le agregamos otro punto.
-                texto = f"{base} {link}"
+                texto = f"{base} {alternativo}"
             else:
-                texto = f"{base}. {link}"
+                texto = f"{base}. {alternativo}"
     return texto
 
 
 def _validar(accion: str, texto: str, estado: Dict[str, Any]) -> bool:
     """Chequeos finales antes de enviar texto generado."""
     plano = _sin_acentos(texto)
+
+    # Regla del dueño: nunca ofrecer enviar el CV o el formulario por WhatsApp.
+    if any(re.search(patron, plano) for patron in OFRECER_ENVIO):
+        return False
+
+    if accion == "error_formulario":
+        # La redacción es libre, pero los ingredientes no son negociables y el
+        # enlace alternativo lo exige el código. Si falta algo, se usa el texto
+        # fijo de emergencia (que sí los trae todos).
+        alternativo = link_formulario_alternativo()
+        if not alternativo or alternativo not in texto:
+            return False
+        for nombre_ingrediente, patron in INGREDIENTES_ERROR.items():
+            if not re.search(patron, plano):
+                logger.info("Error de formulario sin '%s'; se usa el texto fijo", nombre_ingrediente)
+                return False
+        if any(re.search(patron, plano) for patron in PROMESA_FORMULARIO):
+            return False
+        return True
 
     if any(re.search(patron, plano) for patron in MENCIONES_FORMULARIO):
         return False
@@ -501,14 +687,15 @@ def _validar(accion: str, texto: str, estado: Dict[str, Any]) -> bool:
             return False
 
     if accion == "contexto":
-        if estado.get("contexto_dado"):
-            # Ya los contó: no puede volver a largar la lista de datos.
-            if any(marca in plano for marca in ("$25", "semanal", "bonificacion", "remoto")):
-                return False
-        else:
-            necesarios = ("$25", "semanal", "bonificacion", "remoto", "ciertas condiciones", "contacta")
-            if not all(marca in plano for marca in necesarios):
-                return False
+        # Si lo vuelven a pedir, se lo volvemos a dar: puede no haberlo leído,
+        # o puede haber llegado después de entregar el formulario.
+        necesarios = (
+            "$25", "semanal", "bonificacion", "remoto",
+            "ciertas condiciones", "contacta",
+        )
+        if not all(marca in plano for marca in necesarios):
+            return False
+        return True
 
     if accion in ("entregar_formulario", "reenviar_link"):
         link = link_formulario()
@@ -598,10 +785,13 @@ def respuesta_determinista(
     if accion == "contexto":
         datos = contexto_oferta()
         if estado.get("contexto_dado"):
-            return _sin_pedir_datos(
-                mensaje("contexto_repetido", seguimiento=datos.get("seguimiento", "")), estado
-            )
+            return _sin_pedir_datos(mensaje("contexto_repetido", **datos), estado)
         return mensaje("contexto", **datos)
+    if accion == "error_formulario":
+        alternativo = link_formulario_alternativo()
+        if not alternativo:
+            return mensaje("error")
+        return mensaje("error_formulario", link_alternativo=alternativo)
     if accion == "humano":
         return _sin_pedir_datos(mensaje("humano"), estado)
     if accion == "ingles":
@@ -642,7 +832,7 @@ def _es_real(accion: str) -> bool:
     """Señal informativa: respuestas que avanzan la conversación (historial aparte)."""
     return accion in (
         "saludo", "pedir_nombre", "pedir_confirmacion",
-        "entregar_formulario", "reenviar_link",
+        "entregar_formulario", "reenviar_link", "error_formulario",
     )
 
 
@@ -656,7 +846,7 @@ async def procesar_turno(
     estado.update(await get_estado(telefono))
     estado["turnos"] = int(estado.get("turnos") or 0) + 1
 
-    texto = unicodedata.normalize("NFKC", entrada or "")
+    texto = _limpiar_citas(unicodedata.normalize("NFKC", entrada or ""))
     if len(texto) > MAX_LONGITUD:
         texto = texto[:MAX_LONGITUD]
 
@@ -667,6 +857,7 @@ async def procesar_turno(
         return _sin_pedir_datos(mensaje("malicioso", detalle=detalle), estado), estado, False
 
     senales = {
+        "error_formulario": _detecta_error_formulario(texto),
         "pide_contexto": _pide_contexto(texto),
         "pide_link": _pide_link(texto),
         "pide_humano": _pide_humano(texto),
@@ -689,7 +880,10 @@ async def procesar_turno(
             texto, str(estado.get("etapa") or "inicio"), solo_explicito=es_pregunta
         )
     if extraido:
-        nombre = extraido
+        # Un nombre completo ya guardado no se degrada a uno más corto:
+        # "Jose" después de "José Luis Rivera" no debe borrar los apellidos.
+        if not nombre or len(extraido.split()) >= len(nombre.split()):
+            nombre = extraido
     confirmo = bool(estado.get("confirmo")) or _confirma(texto)
 
     # Las decisiones de abajo deben ver los datos recién capturados, no los del
@@ -716,7 +910,12 @@ async def procesar_turno(
 
     # El primer mensaje también lo genera la IA. Solo si no se presenta
     # correctamente volvemos al saludo literal (para no perder la identidad).
-    if estado["turnos"] == 1 and texto_ia and not _validar_primer_mensaje(texto_ia, estado):
+    if (
+        estado["turnos"] == 1
+        and not senales["error_formulario"]
+        and texto_ia
+        and not _validar_primer_mensaje(texto_ia, estado)
+    ):
         logger.info("Primer mensaje de IA incompleto; se usa el saludo de respaldo")
         texto_ia = ""
         accion = "saludo"
@@ -726,6 +925,9 @@ async def procesar_turno(
     if accion == "post_formulario" and accion_ia != "post_formulario":
         # La IA quería reenviar o volver a pedir datos: se descarta su texto y
         # se usa el cierre corto, que no repite el enlace.
+        texto_ia = ""
+    if accion == "error_formulario" and accion_ia != "error_formulario":
+        # Un texto escrito para otra acción no sirve para explicar el fallo.
         texto_ia = ""
 
     if accion == "sin_responder":

@@ -66,6 +66,19 @@ def link_formulario() -> str:
     return ""
 
 
+def link_formulario_alternativo() -> str:
+    """
+    Enlace de respaldo, usado SOLO cuando la persona reporta un problema con el
+    formulario. FORM_LINK_ALTERNATIVO (env / Coolify) gana sobre el YAML.
+    """
+    configurado = env("FORM_LINK_ALTERNATIVO")
+    if configurado:
+        return configurado
+    business = cargar_business()
+    formulario = business.get("formulario") or {}
+    return str(formulario.get("link_alternativo") or "").strip()
+
+
 def contexto_oferta() -> Dict[str, str]:
     """Datos internos de la oferta. Solo se entregan si el prospecto pregunta."""
     contexto = cargar_business().get("contexto_oferta") or {}

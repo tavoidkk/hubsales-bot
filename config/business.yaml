@@ -15,6 +15,9 @@ agente:
 formulario:
   # Formulario obligatorio. FORM_LINK (env / Coolify) tiene prioridad sobre este valor.
   link: "https://forms.gle/dW6Dj8XXJhzhZims7"
+  # Solo se entrega cuando la persona reporta un problema con el enlace o con la
+  # carga del archivo. Nunca se usa en la entrega normal.
+  link_alternativo: "https://docs.google.com/forms/d/e/1FAIpQLSdbEpny6SiqqUIJnY7KxD1gUlkCSJFSGcMaex-88qqsZ6e35A/viewform?usp=dialog"
   nota: "El CV y los requisitos de la empresa se completan en el formulario externo."
 
 # Este bloque es INFORMACIÓN INTERNA: solo se menciona si el prospecto pregunta

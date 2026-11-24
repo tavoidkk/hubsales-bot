@@ -218,9 +218,10 @@ async def test_despedida_no_menciona_celular():
     assert link_formulario() in respuesta
 
 
-async def test_despues_del_formulario_no_vuelve_a_pedir_nombre():
+async def test_despues_del_formulario_la_info_se_da_si_la_piden():
+    """La oferta se explica siempre que la pidan, incluso después del link."""
     await turno("hola")
-    await turno("¿cuánto pagan?")  # contexto dado una sola vez
+    await turno("¿cuánto pagan?")
     await turno("Ana")
     await turno("sí")
     respuesta, estado, real = await turno("¿de qué trata la oferta?")
@@ -228,7 +229,9 @@ async def test_despues_del_formulario_no_vuelve_a_pedir_nombre():
     assert estado["link_enviado"] is True
     assert "nombre" not in respuesta.lower()
     assert "confirm" not in respuesta.lower()
-    assert "$25" not in respuesta
+    assert "$25" in respuesta
+    assert "trabajo remoto" in respuesta
+    assert LINK not in respuesta
     assert real is False
 
 

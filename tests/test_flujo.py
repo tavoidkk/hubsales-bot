@@ -138,13 +138,17 @@ async def test_contexto_solo_preguntado_incluye_datos_autorizados():
     assert real is False
 
 
-async def test_contexto_repetido_no_entrega_datos_otra_vez():
+async def test_contexto_repetido_entrega_datos_otra_vez():
+    """Si lo vuelven a preguntar, se lo volvemos a decir (antes y después del link)."""
     await turno("hola")
     await turno("¿cuánto pagan?")
     segunda, estado, _real = await turno("¿y losbonos?")
 
     assert estado["contexto_dado"] is True
-    assert "$25" not in segunda
+    assert "$25" in segunda
+    assert "bonificaciones por cumplimiento de metas" in segunda
+    assert "nombre" not in segunda.lower()
+    assert "confirm" not in segunda.lower()
 
 
 async def test_reenvia_link_sin_pedir_confirmacion_ni_estado_formulario():

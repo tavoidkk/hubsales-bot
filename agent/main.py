@@ -55,6 +55,11 @@ PORT = int(os.getenv("PORT", "8000"))
 # Un candado por teléfono: "hola" y la pregunta real no se procesan en paralelo.
 _candados: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
+# Eventos cuyo 200 ya fue devuelto pero cuya respuesta aún no se envió. Si el
+# contenedor se apaga en ese instante, se liberan para que el reintento de
+# Zernio no se descarte como duplicado (el prospecto se quedaría sin respuesta).
+_eventos_en_curso: set[str] = set()
+
 proveedor = None
 error_configuracion: str | None = None
 try:
@@ -82,6 +87,16 @@ async def lifespan(app: FastAPI):
     logger.info("Bot de HubSales Group escuchando en el puerto %s", PORT)
 
     yield
+
+    # Apagado limpio (SIGTERM de Coolify): liberamos los eventos a mitad de
+    # proceso. El reintento llegará al contenedor nuevo y sí será atendido.
+    if _eventos_en_curso:
+        logger.info("Liberando %s eventos en curso por el apagado", len(_eventos_en_curso))
+        for evento_id in list(_eventos_en_curso):
+            try:
+                await liberar_evento(evento_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("No se pudo liberar el evento %s: %s", evento_id, exc)
 
 
 app = FastAPI(
@@ -169,47 +184,53 @@ async def webhook_handler(request: Request, tareas: BackgroundTasks):
 
 async def procesar_mensaje(msg: MensajeEntrante):
     evento_id = msg.contexto.get("evento_id") or msg.mensaje_id
+    if evento_id:
+        _eventos_en_curso.add(evento_id)
 
-    async with _candados[msg.telefono]:
-        try:
-            historial = await obtener_historial(msg.telefono)
-            respuesta, _estado, es_respuesta_real = await procesar_turno(
-                msg.telefono, msg.texto, historial
-            )
-
-            if not respuesta.strip():
-                # Nada que enviar (por ejemplo, un "gracias" final). Igual se
-                # recuerda el mensaje para que la IA no pida lo mismo dos veces.
-                await guardar_mensaje(msg.telefono, "user", msg.texto)
-                await liberar_evento(evento_id)
-                return
-
-            enviado = await proveedor.enviar_mensaje(
-                msg.telefono, respuesta, msg.contexto
-            )
-            if not enviado:
-                # Si el envío falló, liberamos el evento para que el reintento
-                # del proveedor SÍ se procese y el prospecto no quede sin respuesta.
-                logger.error(
-                    "No se pudo enviar la respuesta a %s; se libera el evento",
-                    msg.telefono,
-                )
-                await liberar_evento(evento_id)
-                return
-
-            # Toda la conversación entra al historial: la IA necesita ver también
-            # las respuestas de contexto y de "fuera de línea" para no repetirse.
-            await guardar_mensaje(msg.telefono, "user", msg.texto)
-            await guardar_mensaje(msg.telefono, "assistant", respuesta)
-
-            logger.info("Respuesta enviada a %s: %s", msg.telefono, respuesta)
-
-        except Exception as exc:  # noqa: BLE001
-            logger.exception("Error procesando el mensaje de %s: %s", msg.telefono, exc)
-            await liberar_evento(evento_id)
+    try:
+        async with _candados[msg.telefono]:
             try:
-                await proveedor.enviar_mensaje(
-                    msg.telefono, obtener_mensaje_error(), msg.contexto
+                historial = await obtener_historial(msg.telefono)
+                respuesta, _estado, es_respuesta_real = await procesar_turno(
+                    msg.telefono, msg.texto, historial
                 )
-            except Exception:  # noqa: BLE001
-                logger.error("Tampoco se pudo avisar del error")
+
+                if not respuesta.strip():
+                    # Nada que enviar (por ejemplo, un "gracias" final). Igual se
+                    # recuerda el mensaje para que la IA no pida lo mismo dos veces.
+                    await guardar_mensaje(msg.telefono, "user", msg.texto)
+                    await liberar_evento(evento_id)
+                    return
+
+                enviado = await proveedor.enviar_mensaje(
+                    msg.telefono, respuesta, msg.contexto
+                )
+                if not enviado:
+                    # Si el envío falló, liberamos el evento para que el reintento
+                    # del proveedor SÍ se procese y el prospecto no quede sin respuesta.
+                    logger.error(
+                        "No se pudo enviar la respuesta a %s; se libera el evento",
+                        msg.telefono,
+                    )
+                    await liberar_evento(evento_id)
+                    return
+
+                # Toda la conversación entra al historial: la IA necesita ver también
+                # las respuestas de contexto y de "fuera de línea" para no repetirse.
+                await guardar_mensaje(msg.telefono, "user", msg.texto)
+                await guardar_mensaje(msg.telefono, "assistant", respuesta)
+
+                logger.info("Respuesta enviada a %s: %s", msg.telefono, respuesta)
+
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Error procesando el mensaje de %s: %s", msg.telefono, exc)
+                await liberar_evento(evento_id)
+                try:
+                    await proveedor.enviar_mensaje(
+                        msg.telefono, obtener_mensaje_error(), msg.contexto
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.error("Tampoco se pudo avisar del error")
+    finally:
+        if evento_id:
+            _eventos_en_curso.discard(evento_id)
